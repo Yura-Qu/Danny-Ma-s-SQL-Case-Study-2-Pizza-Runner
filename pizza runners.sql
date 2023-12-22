@@ -279,3 +279,85 @@ SELECT DAYNAME(order_time) AS day_of_week,
 FROM customer_orders_temp
 GROUP BY day_of_week
 ORDER BY pizza_count DESC;
+
+# How many runners signed up for each 1 week period? (i.e. week starts 2021-01-01)
+
+SELECT EXTRACT(WEEK FROM registration_date + 3) AS week_of_year,
+   COUNT(runner_id)
+FROM runners
+GROUP BY week_of_year
+ORDER BY week_of_year;
+
+# What was the average time in minutes it took for each runner to arrive at the Pizza Runner HQ to pick up the order?
+
+SELECT ROUND(AVG(td),0) FROM
+(SELECT DISTINCT order_id, 
+ ((TIMESTAMPDIFF(SECOND, order_time, pickup_time)+30)/60)AS td
+FROM 
+    (SELECT *
+    FROM customer_orders_temp
+    JOIN runner_orders_temp USING (order_id)
+    WHERE distance IS NOT NULL) AS combined_orders) AS time_diff;
+
+
+# Is there any relationship between the number of pizzas and how long the order takes to prepare?
+
+SELECT 
+    no_of_pizza,
+    AVG(td) AS avg_td
+FROM (
+    SELECT 
+        order_id, 
+        COUNT(order_id) AS no_of_pizza,
+        ((TIMESTAMPDIFF(SECOND, order_time, pickup_time) + 30) / 60) AS td
+    FROM 
+        customer_orders_temp
+    JOIN 
+        runner_orders_temp USING (order_id)
+    WHERE 
+        distance IS NOT NULL
+    GROUP BY 
+        order_id, td
+) AS subquery
+GROUP BY 
+    no_of_pizza
+ORDER BY 
+    no_of_pizza;
+# What was the average distance traveled for each customer?
+
+Select 
+customer_id,
+avg(distance) as avg_distance
+ from customer_orders_temp
+join runner_orders_temp 
+USING (order_id)
+WHERE distance IS NOT NULL
+group by customer_id
+order by avg_distance;
+
+# What was the difference between the longest and shortest delivery times for all orders?
+SELECT max(duration)-min(duration)
+    FROM 
+        runner_orders_temp;
+# What was the average speed for each runner for each delivery and do you notice any trend for these values?
+SELECT 
+    order_id, 
+    runner_id,
+    ROUND(average_speed, 2) AS rounded_average_speed
+FROM (
+    SELECT 
+        order_id, 
+        runner_id,
+        distance / (duration / 60) AS average_speed
+    FROM 
+        Practice1.runner_orders_temp
+    WHERE 
+        distance IS NOT NULL
+) AS subquery
+GROUP BY 
+    order_id, runner_id, rounded_average_speed;
+
+# What is the successful delivery percentage for each runner?
+
+SELECT runner_id,count(distance)/count(runner_id) FROM Practice1.runner_orders_temp
+group by runner_id;
