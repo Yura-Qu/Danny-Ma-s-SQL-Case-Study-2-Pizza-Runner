@@ -56,4 +56,31 @@ ON
 WHERE
     subscriptions.customer_id IN (1,2,4,16,21);
 ```
-- Customers with `customer_id` = 1,2,4,16 and 21 are select to do the onboarding journey.
+
+| **customer_id** | **plan_id** | **plan_name** | **start_date** |
+|:---------------:|:-----------:|:-------------:|:--------------:|
+| 1               | 0           | trial         | 2020-08-01     |
+| 1               | 1           | basic monthly | 2020-08-08     |
+| 2               | 0           | trial         | 2020-09-20     |
+| 2               | 3           | pro annual    | 2020-09-27     |
+| 4               | 0           | trial         | 2020-01-17     |
+| 4               | 1           | basic monthly | 2020-01-24     |
+| 4               | 4           | churn         | 2020-04-21     |
+| 16              | 0           | trial         | 2020-05-31     |
+| 16              | 1           | basic monthly | 2020-06-07     |
+| 16              | 3           | pro annual    | 2020-10-21     |
+| 21              | 0           | trial         | 2020-02-04     |
+| 21              | 1           | basic monthly | 2020-02-11     |
+| 21              | 2           | pro monthly   | 2020-06-03     |
+| 21              | 4           | churn         | 2020-09-27     |
+
+- Customers with `customer_id` = 1,2,4,16 and 21 are selected to do the onboarding journey.
+  - Customer 1: The customer began their journey by initiating a free trial on August 1, 2020. Following the trial's conclusion (after 7 days) on August 8, 2020, they proceeded to subscribe to the basic monthly plan.
+  - Customer 2 initiated their free trial on September 20, 2020. After the trial concluded, they subscribed to the pro annual plan on September 27, 2020.
+  - Customer 4 started their free trial on January 17, 2020. Following the trial, they subscribed to the basic monthly plan on January 24, 2020. However, they canceled their Foodie-Fi basic monthly plan on April 21, 2020.
+  - Customer 16 commenced their free trial on May 31, 2020, and subsequently subscribed to the basic monthly plan on June 07, 2020. Later, they upgraded to the pro annual plan on October 21, 2020.
+  - Customer 21 commenced their free trial on February 04, 2020, and thereafter subscribed to the basic monthly plan on February 11, 2020. They later upgraded to the pro annual plan on June 03, 2020. However, they canceled their Foodie-Fi basic monthly plan on September 27, 2020.
+ 
+## B. Data Analysis Questions
+
+### 1. How many customers has Foodie-Fi ever had?
