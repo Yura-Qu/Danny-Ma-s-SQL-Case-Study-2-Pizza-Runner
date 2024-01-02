@@ -84,3 +84,113 @@ WHERE
 ## B. Data Analysis Questions
 
 ### 1. How many customers has Foodie-Fi ever had?
+
+```sql
+select count(distinct customer_id) from subscriptions; 
+```
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/815e6460-e974-4930-866b-683a19d99c86)
+
+There are 1000 customers.
+
+### 2. What is the monthly distribution of trial plan start_date values for our dataset - use the start of the month as the group by value
+
+> Number of trial plans monthly
+> 1. Extract the months from `start_date` column by using `MONTH( )`
+> 2. Filter results to show only those on trial plan `plan_id = 0`
+> 3. Group and count the total number of plan_ids per month `COUNT(MONTH(start_date))`
+
+```sql
+SELECT
+    MONTH(start_date) AS months,
+    COUNT(MONTH(start_date)) AS customers
+FROM
+    subscriptions
+where
+    plan_id = 0
+GROUP BY
+    MONTH(start_date)
+ORDER BY
+    customers DESC;
+```
+|   months  |   customers  |
+|-----------|--------------|
+|   3       |   94         |
+|   7       |   89         |
+|   8       |   88         |
+|   1       |   88         |
+|   5       |   88         |
+|   9       |   87         |
+|   12      |   84         |
+|   4       |   81         |
+|   6       |   79         |
+|   10      |   79         |
+|   11      |   75         |
+|   2       |   68         |
+
+- March has the highest number of customers starting their journey with Foodie-Fi.
+- February, on the other hand, has the least number of customers beginning their trial plan.
+- Overall, the count of customers joining Foodie-Fi is fairly consistent across all months.
+
+### 3. What plan start_date values occur after the year 2020 for our dataset? — Show the breakdown by count of events for each plan_name.
+
+> What is the count for each plan post-2020?
+> 1. Select plans with start dates on or after January 1, 2021 -- `YEAR(s.start_date) > 2020`
+> 2. Count the customers based on the number of events.
+> 3. Group the outcomes by plan names
+
+```sql
+SELECT
+    s.plan_id,
+    p.plan_name,
+    count(s.plan_id) AS plan_count
+FROM
+    subscriptions as s
+join
+    plans as p
+using
+    (plan_id)
+WHERE
+    YEAR(s.start_date) > 2020
+group by
+    s.plan_id,
+    p.plan_name
+order by
+    s.plan_id;
+```
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/bc24eebb-815b-47f5-be29-c99ec7032399)
+
+- No customers initiated their trial plan after 2020 (which is concerning).
+- There's a significant number of customers ending their Foodie-Fi services after 2020 (equally concerning).
+- The counts for Pro Monthly and Pro Annual subscriptions are relatively similar.
+
+> Hence, to explore whether this is simply a coding error or an actual absence of customers starting their trial plan after 2020, I reviewed the annual distribution of trial plans.
+> ```sql
+> SELECT
+>     YEAR(start_date),
+>     count(YEAR(start_date))
+> FROM
+>     subscriptions as s
+> WHERE
+>     s.plan_id = 0
+> group by
+>     YEAR(start_date);
+> ```
+> ![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/b9cc0b3a-8797-4b30-88ef-08b2e1e79897)
+> 
+> It appears that indeed, no customer initiated their trial plan after 2020.
+
+> Yet, upon reviewing the dataset, it's evident that the overwhelming majority (as much as 92%) of records occurred are not from after 2020.
+> ```sql
+> SELECT 
+>    YEAR(start_date),
+>    count(YEAR(start_date)),
+>    round(count(YEAR(start_date))/ 2650,2)*100
+> FROM 
+>    subscriptions 
+> group by 
+>    YEAR(start_date);
+> ```
+> ![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/e0564a26-64a8-4552-b001-b6fe82fb58e5)
+> 
+> Therefore, the outcome might not accurately represent the actual scenario -- this is the limitation of this dataset. (Data limitation: the available data is inadequate or incomplete, leading to constraints or restrictions in its usability for analysis or decision-making) 
+
