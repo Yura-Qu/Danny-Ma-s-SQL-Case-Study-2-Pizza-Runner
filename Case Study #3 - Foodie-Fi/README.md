@@ -1,5 +1,11 @@
 # Case Study #3 - Foodie-Fi
 
+## Table of Contents
+- [Introduction](#introduction)
+- [Customer Jouney](#a-customer-journey)
+- [Data Analysis Questions](#b-data-analysis-questions)
+- [Challenge Payment Question](#c-challenge-payment-question)
+
 ## Introduction 
 
 Danny noticed a market gap and aimed to create Foodie-Fi, a specialized streaming service exclusively for food-related content, akin to Netflix but solely for cooking shows. In 2020, with a group of astute friends, he launched this startup, offering monthly and annual subscriptions, granting users limitless access to an array of exclusive global food videos.
