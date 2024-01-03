@@ -307,3 +307,178 @@ GROUP BY plan_name;
 2. Notably, the churn rate experienced a significant surge, jumping from 9.2% at the trial period's conclusion to 23.6% by the year's end.
 3. Additionally, the remarkably low rate of trial plan subscriptions, standing at only 1.9%, suggests a limited number of new Foodie-Fi users.
 4. However, there's an observable increase in users transitioning to the Pro Annual plan compared to the count of customers initially subscribed to the Pro Annual plan. This pattern hints at more users upgrading from Basic and Pro Monthly plans to the Pro Annual subscription tier.
+
+### 8. How many customers have upgraded to an annual plan in 2020?
+
+```sql
+select 
+    count(customer_id) 
+from 
+    subscriptions
+where 
+    year(start_date) = 2020
+and 
+    plan_id = 3;
+```
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/bc83d2b0-10fb-4a77-85e1-1c378ceddb47)
+
+- 195 customers upgraded to an annual plan in 2020
+
+### 9. How many days on average does it take for a customer to an annual plan from the day they join Foodie-Fi?
+
+> First, I need to test my assumption that all the customers join foodie fi with a trail plan: 
+
+```sql
+WITH ranked_subs AS (
+    SELECT *,
+        RANK() OVER (PARTITION BY customer_id ORDER BY start_date) AS ranks
+    FROM subscriptions
+)
+
+SELECT plan_id, COUNT(plan_id)
+FROM ranked_subs
+WHERE ranks = 1
+GROUP BY plan_id;
+```
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/132045a1-3f9e-47ef-a8c3-1879d70e0814)
+
+YES!
+
+> I perform a self-join on the "subscriptions" table where the `plan_id` in the first instance equals 0 (trail plan) and the `plan_id` in the second instance equals 3 (pro annual) for the same customer. Subsequently, I compute the date difference.
+
+```sql
+WITH annual_plan AS (
+    SELECT 
+        a.customer_id, 
+        a.plan_id AS current_plan, 
+        b.plan_id AS previous_plan, 
+        a.start_date AS current_start, 
+        b.start_date AS previous_start
+    FROM 
+        subscriptions AS a
+    JOIN 
+        subscriptions AS b
+    ON 
+        a.customer_id = b.customer_id
+    WHERE 
+        a.plan_id = 3
+    AND 
+        b.plan_id = 0   
+)
+SELECT 
+    ROUND(AVG(DATEDIFF(current_start,previous_start)),0) AS date_difference
+FROM 
+    annual_plan;
+```
+The annual_plan table:
+
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/f81ae500-dcc8-4bf5-ab64-66552bf6ff96)
+
+On average, customers typically take around 105 days from their initial sign-up with Foodie-Fi to transition to an annual plan.
+
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/6697dcc7-9bfa-4160-9992-da1d6b2c0090) 
+
+### 10. Can you further breakdown this average value into 30-day periods (i.e. 0–30 days, 31–60 days, etc)
+
+> In this question, I used a function called `WIDTH_BUCKET`, and Chatgpt gives a very good explanation of `WIDTH_BUCKET`:
+> 
+> `WIDTH_BUCKET` is used to categorize numerical values into a defined set of ranges or buckets. It's particularly useful for creating histograms or segmenting continuous data into discrete groups.
+> - Here's a breakdown of how it operates:
+>   - Parameters: It takes several parameters:
+>     - Input value: The numerical value you want to place into a bucket.
+>     - Lower bound: The minimum value of the range.
+>     - Upper bound: The maximum value of the range.
+>     - Number of buckets: The desired number of buckets to create between the lower and upper bounds.
+>   - Functionality: `WIDTH_BUCKET` computes the bucket number for each input value. It divides the range specified by the lower and upper bounds into a specific number of equally spaced intervals or buckets.
+> - Example
+>   ```sql
+>   SELECT age,
+>        WIDTH_BUCKET(age, 0, 100, 5) AS age_bucket
+>   FROM person_data; ```
+> -    
+>    - `WIDTH_BUCKET(age, 0, 100, 5)` categorizes the age values into five buckets between 0 and 100.
+>    - Bucket 1: Ages from 0 to 20
+>    - Bucket 2: Ages from 21 to 40
+>    - Bucket 3: Ages from 41 to 60
+>    - Bucket 4: Ages from 61 to 80
+>    - Bucket 5: Ages from 81 to 100
+
+Alternatively, just use the simple `CASE WHEN`
+
+```sql
+WITH a AS (
+	SELECT 
+        a.customer_id, 
+        a.plan_id AS current_plan, 
+        b.plan_id AS previous_plan, 
+        a.start_date AS current_start, 
+        b.start_date AS previous_start,
+        DATEDIFF(a.start_date, b.start_date) as Date_diff,
+        FLOOR(DATEDIFF(a.start_date, b.start_date) / 30) as bins
+    FROM 
+        subscriptions AS a
+    JOIN 
+        subscriptions AS b
+    ON 
+        a.customer_id = b.customer_id
+    WHERE 
+        a.plan_id = 3
+    AND 
+        b.plan_id = 0 
+), 
+b AS (
+    SELECT *,
+    CASE 
+        WHEN bins = 0 THEN '0–30 days'
+        WHEN bins = 1 THEN '31–60 days'
+        WHEN bins = 2 THEN '61–90 days'
+        WHEN bins = 3 THEN '91–120 days'
+        WHEN bins = 4 THEN '121–150 days'
+        WHEN bins = 5 THEN '151–180 days'
+        WHEN bins = 6 THEN '181–210 days'
+        WHEN bins = 9 THEN '211–240 days'
+        WHEN bins = 10 THEN '241–270 days'
+        WHEN bins = 11 THEN '271–300 days'
+        WHEN bins = 12 THEN '301–330 days'
+        ELSE '331–360 days'
+    END AS category
+    FROM a
+) 
+SELECT category, 
+    ROUND(AVG(Date_diff), 0) as Average_days, 
+	COUNT(category) as Counts
+FROM b
+GROUP BY category
+ORDER BY MIN(bins);
+```
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/5b64f5e2-76b3-4dde-838a-1391a4a5c7c6)
+
+### 11. How many customers were downgraded from a pro monthly to a basic monthly plan in 2020?
+
+```sql
+SELECT COUNT(a.customer_id) AS no_of_customer
+FROM subscriptions AS a
+JOIN subscriptions AS b ON a.customer_id = b.customer_id
+WHERE a.plan_id = 2
+  AND b.plan_id = 1
+  AND YEAR(a.start_date) = 2020
+  AND YEAR(b.start_date) = 2020
+  AND DATEDIFF(b.start_date, a.start_date) > 0;
+```
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/70301540-1759-4e33-9712-314247562ac2)
+
+- During 2020, there were no customers who switched from the pro monthly to the basic monthly plan.
+
+## C. Challenge Payment Question
+
+The Foodie-Fi team wants you to create a new payments table for the year 2020 that includes amounts paid by each customer in the subscriptions table with the following requirements:
+
+- monthly payments always occur on the same day of the month as the original start_date of any monthly paid plan
+- upgrades from basic to monthly or pro plans are reduced by the current paid amount in that month and start immediately
+- upgrades from pro monthly to pro annual are paid at the end of the current billing period and also start at the end of the month period
+- once a customer churns they will no longer make payments
+
+Thus: 
+> 1. Only start_date in 2020 is included
+> 2. Remove trial plans since no payments were made
+> 3. 
