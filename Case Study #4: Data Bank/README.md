@@ -116,3 +116,177 @@ SELECT ROUND(AVG(total_nodes)) FROM cte1;
 > On average, customers are reassigned to a new node approximately every 24 days.
 
 ### 5. What is the median, 80th, and 95th percentile for this same reallocation days metric for each region?
+
+> I am still figuring out how to find the median, 80th, and 95th percentile. But here is the average...
+```sql
+WITH cte AS (
+    SELECT 
+        *,
+        DATEDIFF(end_date, start_date) AS date_difference 
+    FROM 
+        customer_nodes
+    WHERE 
+        end_date != '9999-12-31'
+    ORDER BY 
+        customer_id
+)
+SELECT 
+    region_id,
+    AVG(date_difference) AS average_date_difference
+FROM 
+    cte
+GROUP BY
+    region_id
+ORDER BY 
+    region_id;
+```
+
+## B. Customer Transactions
+
+### 6. What is the unique count and total amount for each transaction type?
+
+```sql
+select 
+    txn_type,
+    count(txn_type) as transation_count,
+    sum(txn_amount) as transaction_amount,
+    avg(txn_amount) as avg_transaction
+from 
+    customer_transactions
+group by 
+    txn_type;
+```
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/932b6d58-9c8f-4915-a5bf-56fcb549de62)
+
+
+- Deposits constitute the highest transaction count (2671), while withdrawals mark the lowest transaction count (1580).
+- Deposits also represent the highest total transaction amount (1359168), whereas withdrawals exhibit the lowest total transaction amount (793003).
+- The average transaction amount is highest for deposits (508.8611) and lowest for purchases (498.7860).
+
+### 7. What is the average total historical deposit counts and amounts for all customers?
+
+```sql
+select 
+    txn_type,
+    count(txn_type) as transation_count,
+    sum(txn_amount) as transaction_amount,
+    avg(txn_amount) as avg_transaction
+from 
+    customer_transactions
+group by 
+    txn_type;
+```
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/60c6b1ce-9533-4e5b-a962-64b9e5730ce5)
+
+- The average deposit counts per customer is 5 and the average deposit amount per customer is 509.
+
+### 8. For each month — how many Data Bank customers make more than 1 deposit and either one purchase or withdrawal in a single month?
+
+```sql
+WITH monthly_amount AS (
+    SELECT 
+        *,
+        MONTH(txn_date) AS months,
+        CASE WHEN txn_type = 'deposit' THEN 1 ELSE 0 END AS deposit_amount,
+        CASE WHEN txn_type = 'purchase' THEN 1 ELSE 0 END AS purchase_amount,
+        CASE WHEN txn_type = 'withdrawal' THEN 1 ELSE 0 END AS withdrawal_amount 
+    FROM 
+        customer_transactions 
+), aa AS (
+SELECT 
+    customer_id,
+    months,
+    SUM(deposit_amount) AS sum_deposit_amount,
+    SUM(purchase_amount) AS sum_purchase_amount,
+    SUM(withdrawal_amount) AS sum_withdrawal_amount,
+    SUM(purchase_amount) + SUM(withdrawal_amount) AS purchase_withdrawal
+FROM 
+    monthly_amount 
+GROUP BY 
+    customer_id, months 
+HAVING 
+    sum_deposit_amount > 1 
+AND 
+    (sum_purchase_amount = 1 or sum_withdrawal_amount =1)
+AND 
+    purchase_withdrawal = 1
+ORDER BY 
+    customer_id) 
+    
+select 
+    months,
+    count(customer_id) as customer_count
+from 
+    aa
+group by 
+    months;
+```
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/5279b89d-b440-4f5b-8b06-c20ae22e3e30)
+
+1. First I made three dummy variables:
+   1. deposit_amount = 1 when transaction type = deposit, otherwise = 0
+   2. purchase_amount = 1 when transaction type = purchase, otherwise = 0
+   3. withdrawal_amount = 1 when transaction type = withdrawal, otherwise = 0
+2. Then I calculated the total transaction amount of each type of the transaction type
+3. I filtered only the results that
+   1. Has more than 1 deposit
+   2. And either one purchase or withdrawal
+   in a month
+> January had the highest number of customers (53) who had made more than 1 deposit and either 1 withdrawal or 1 deposit, while April had the least number of such customers (22).
+
+### 9. What is the closing balance for each customer at the end of the month?
+
+> First, I checked how many months of data is recorded
+> ```sql
+> select distinct(month(txn_date)) from customer_transactions;
+> ```
+> ![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/edd026fa-b9a9-49ef-bf29-db6caf1805e5)
+>
+> In the period from January to April 2020, the `customer_transaction` dataset recorded entries only for transaction occurrences. For these months, the closing balance remains consistent with the preceding month's closing balance."
+> - For example: for customer 1, there were only records for January and March:
+>   ![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/df9d988c-7516-498d-93dc-c06e714a7c01)
+
+
+
+```sql
+WITH cte AS (
+    SELECT 
+        *,
+        MONTH(txn_date) AS months,
+        CASE
+            WHEN txn_type = 'deposit' THEN ABS(txn_amount)
+            WHEN txn_type IN ('purchase', 'withdrawal') THEN -txn_amount
+            ELSE txn_amount
+        END AS modified_amount
+    FROM 
+        customer_transactions
+)
+SELECT 
+    customer_id,
+    months,
+    SUM(SUM(modified_amount)) OVER (PARTITION BY customer_id ORDER BY months) AS cumulative_sum
+FROM 
+    cte
+GROUP BY 
+    customer_id, 
+    months
+ORDER BY 
+    customer_id, 
+    months;
+```
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/839ada6a-48bc-4b6b-9c63-b7c79158681e)
+
+1. Interpretation of different transaction types:
+   1. Deposits refer to money added or credited to an account, typically reflecting an increase in funds -- positive 
+   2. Withdrawals signify money taken out or debited from an account, usually indicating a decrease in funds -- negative
+   3. Purchases represent transactions made using the Data Bank debit card, indicating a decrease in funds -- negative
+      > Thus I used `CASE WHEN` to change the transaction amount accordingly
+2. Then I calculated the cumulative account balance of each customer by month by using the window function:
+   `SUM(SUM(modified_amount)) OVER (PARTITION BY customer_id ORDER BY months)`
+   
+   1. `SUM(modified_amount):` This calculates the sum of the modified_amount column within each group defined by `customer_id` and `months`.
+   2. `OVER (PARTITION BY customer_id ORDER BY months)`: This clause establishes the window frame or partition. It groups the data by `customer_id` and orders them within each partition based on the `months` column.
+   3. The outer `SUM()` function then computes the cumulative sum across these partitions.
+> If there are missing months, it signifies no transactions during those periods, thus the closing balance remains the same from the preceding month.
+
+### 10. What is the percentage of customers who increase their closing balance by more than 5%?
