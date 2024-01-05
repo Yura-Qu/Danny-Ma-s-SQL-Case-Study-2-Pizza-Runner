@@ -13,4 +13,4 @@ Big shoutout to [@DataWithDanny](https://www.datawithdanny.com/) for the awesome
 |-------------:|----------------|----------------|
 |Case Study #2|[Pizza Runner](https://github.com/Yura-Qu/SQL-Case-Study/blob/main/Case%20Study%20%232%20-%20Pizza%20Runner)|[Pizza Runner](https://8weeksqlchallenge.com/case-study-2/)
 |Case Study #3|[Foodie-Fi](https://github.com/Yura-Qu/SQL-Case-Study/blob/main/Case%20Study%20%233%20-%20Foodie-Fi)|[Foodie-Fi](https://8weeksqlchallenge.com/case-study-3/)|
-|     3|               |
+|Case Study #4|[Data Bank](https://github.com/Yura-Qu/SQL-Case-Study/tree/main/Case%20Study%20%234%3A%20Data%20Bank)|[Data Bank](https://8weeksqlchallenge.com/case-study-4/)|
