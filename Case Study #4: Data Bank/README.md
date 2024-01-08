@@ -287,6 +287,56 @@ ORDER BY
    1. `SUM(modified_amount):` This calculates the sum of the modified_amount column within each group defined by `customer_id` and `months`.
    2. `OVER (PARTITION BY customer_id ORDER BY months)`: This clause establishes the window frame or partition. It groups the data by `customer_id` and orders them within each partition based on the `months` column.
    3. The outer `SUM()` function then computes the cumulative sum across these partitions.
-> If there are missing months, it signifies no transactions during those periods, thus the closing balance remains the same from the preceding month.
+> If there are missing months, it means no transactions during those periods, thus the closing balance remains the same from the preceding month.
 
 ### 10. What is the percentage of customers who increase their closing balance by more than 5%?
+
+## C. Data Allocation Challenge
+
+### 11. Running a customer balance column that includes the impact of each transaction
+
+```sql
+SELECT 
+    customer_id,
+    txn_date,
+    txn_type,
+    txn_amount,
+    SUM(
+        CASE 
+            WHEN txn_type = 'deposit' THEN txn_amount
+            WHEN txn_type = 'withdrawal' THEN -txn_amount
+            WHEN txn_type = 'purchase' THEN -txn_amount
+            ELSE 0
+        END
+    ) OVER(PARTITION BY customer_id ORDER BY txn_date) AS running_balance
+FROM 
+    customer_transactions;
+```
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/12a0a9a9-2516-4295-a8e6-4131ed3c3310)
+
+- `SUM(CASE WHEN txn_type = 'deposit' THEN txn_amount WHEN txn_type = 'withdrawal' THEN -txn_amount WHEN txn_type = 'purchase' THEN -txn_amount ELSE 0 END) OVER(PARTITION BY customer_id ORDER BY txn_date) AS running_balance`:
+  - Uses a `CASE` statement to categorize transactions into deposits, withdrawals, and purchases, adjusting the amounts accordingly by making withdrawals and purchases negative.
+  - Utilizes the `SUM()` function combined with `OVER(PARTITION BY customer_id ORDER BY txn_date)` to calculate a running balance for each customer_id by aggregating the adjusted transaction amounts based on the transaction date order.
+
+### 12. Customer balance at the end of each month
+
+```sql
+SELECT 
+    customer_id,
+    MONTH(txn_date) AS transaction_month,
+    SUM(
+        CASE 
+            WHEN txn_type = 'deposit' THEN txn_amount
+            WHEN txn_type = 'withdrawal' THEN -txn_amount
+            WHEN txn_type = 'purchase' THEN -txn_amount
+            ELSE 0
+        END
+    ) AS total_amount
+FROM 
+    customer_transactions
+GROUP BY 
+    customer_id, transaction_month
+ORDER BY 
+    customer_id;
+```
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/69ed87c4-db6e-4076-9fc5-55a648b5c030)
