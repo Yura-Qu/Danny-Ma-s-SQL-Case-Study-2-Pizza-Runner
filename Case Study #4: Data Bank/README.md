@@ -330,7 +330,7 @@ SELECT
             WHEN txn_type = 'withdrawal' THEN -txn_amount
             WHEN txn_type = 'purchase' THEN -txn_amount
             ELSE 0
-        END
+        END 
     ) AS total_amount
 FROM 
     customer_transactions
@@ -340,3 +340,37 @@ ORDER BY
     customer_id;
 ```
 ![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/69ed87c4-db6e-4076-9fc5-55a648b5c030)
+
+### 13. minimum, average, and maximum values of the running balance for each customer
+
+```sql
+WITH cte AS (
+    SELECT 
+        customer_id,
+        MONTH(txn_date) AS Month,
+        SUM(
+            CASE 
+                WHEN txn_type = 'deposit' THEN txn_amount
+                WHEN txn_type = 'withdrawal' THEN -txn_amount
+                WHEN txn_type = 'purchase' THEN -txn_amount
+                ELSE 0
+            END
+        ) OVER (PARTITION BY customer_id ORDER BY txn_date) AS running_balance 
+    FROM 
+        customer_transactions
+)
+SELECT 
+    customer_id,
+    ROUND(AVG(running_balance)) AS Average,
+    MIN(running_balance) AS Minimum,
+    MAX(running_balance) AS Maximum
+FROM 
+    cte
+GROUP BY 
+    customer_id
+ORDER BY 
+    customer_id;
+```
+
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/6f983cdb-56e3-4279-acd7-15829e4e2076)
+
