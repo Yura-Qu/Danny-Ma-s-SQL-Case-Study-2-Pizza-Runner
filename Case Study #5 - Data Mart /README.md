@@ -233,5 +233,82 @@ JOIN
 ```
 ![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/0b62fa46-0ff6-4c72-8aa7-f09c51feee3a)
 
+### 7. What is the percentage of sales by demographic for each year in the dataset?
 
+```sql
+with cte1 as (
+select 
+	calendar_year,
+    demographic,
+    sum(sales) as sales
+from 
+	clean_weekly_sales
+group by
+	calendar_year,
+    demographic
+order by 
+	calendar_year,
+    demographic
+),
+cte2 as (    
+select
+	calendar_year as cte2_year,
+    sum(sales) as Total
+from 
+	clean_weekly_sales
+group by 
+	calendar_year
+order by 
+	calendar_year),
+cte3 as (    
+select * from cte1
+join cte2
+where 
+	cte1.calendar_year = cte2_year
+)
+select 
+	calendar_year,
+    demographic,
+    sales,
+    round(sales/Total,4)*100 as percentage
+from cte3
+;
+```
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/d73db602-7678-4726-97e4-ed73d9d743ae)
 
+- The majority of sales, approximately 40%, in the years 2018, 2019, and 2020 fall under the category of an unknown demographic. Following this, around 30% of sales are attributed to families, while couples represent the smallest portion.
+
+### 8. Which age_band and demographic values contribute the most to Retail sales?
+
+```sql
+select 
+    age_band,
+    demographic,
+    sum(sales),
+    sum(sales)/ SUM(SUM(sales)) OVER () *100 As Retail_sales
+from 
+    clean_weekly_sales
+where 
+    platform = 'Retail'
+group by 
+    age_band,
+    demographic
+order by 
+    Retail_sales desc
+```
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/81f9f781-65be-481d-b7e6-9b68d2f388fa)
+
+- The largest share of retail sales, constituting 42%, comes from an unknown age_band and demographic. Following this, retired families contribute 16.73%, and retired couples make up 16.07% of the total sales.
+
+### 9. Can we use the avg_transaction column to find the average transaction size for each year for Retail vs Shopify? If not - how would you calculate it instead?
+
+```sql
+SELECT 
+  calendar_year, 
+  platform, 
+  ROUND(AVG(avg_transaction),0) AS avg1, 
+  SUM(sales) / sum(transactions) AS avg2
+FROM clean_weekly_sales
+GROUP BY calendar_year, platform
+ORDER BY calendar_year, platform;
+```
