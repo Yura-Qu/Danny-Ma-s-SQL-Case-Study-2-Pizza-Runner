@@ -485,3 +485,5 @@ We can observe a distinct seasonal pattern based on the data from 2018 to 2020:
 - According to the trends in 2018 and 2019, we anticipate a peak in sales around April and July, with a corresponding drop in sales between April and July.
 - However, in 2020, sales continue to rise from April to June, coinciding with the introduction of new sustainable packaging in mid-June. Surprisingly, there is an unexpected decline in sales in July, followed by a recovery in August.
 - Consequently, attributing the fluctuations in sales solely to the introduction of the new sustainable packaging may be challenging, given the deviation from the typical sales patterns observed in previous years.
+
+### 12. How do the sale metrics for these 2 periods before and after compare with the previous years in 2018 and 2019?
