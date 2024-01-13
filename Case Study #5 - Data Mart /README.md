@@ -312,3 +312,176 @@ FROM clean_weekly_sales
 GROUP BY calendar_year, platform
 ORDER BY calendar_year, platform;
 ```
+
+## 3. Before & After Analysis
+
+> This technique is usually used when we inspect an important event and want to inspect the impact before and after a certain point in time.
+>
+> Taking the `week_date` value of **2020-06-15** as the baseline week where the Data Mart sustainable packaging changes came into effect.
+>
+> We would include all week_date values for 2020-06-15 as the start of the period after the change and the previous week_date values would be before
+
+### 10. 
+#### What is the total sales for the 4 weeks before and after 2020-06-15? 
+
+```sql
+WITH CTE1 as (
+Select *
+from clean_weekly_sales
+where 
+    (dayofyear(DATE_FORMAT(week_dates, '%y/%m/%d')) > dayofyear(DATE_FORMAT('2020/06/15', '%y/%m/%d'))-28
+    and week_dates < DATE_FORMAT('2020/06/15', '%y/%m/%d')
+	and calendar_year = 2020 )
+    or (dayofyear(DATE_FORMAT(week_dates, '%y/%m/%d')) < dayofyear(DATE_FORMAT('2020/06/15', '%y/%m/%d'))+28
+    and week_dates > DATE_FORMAT('2020/06/15', '%y/%m/%d')
+	and calendar_year = 2020 )
+order by week_number),
+CTE2 as (
+select *,
+    CASE
+    WHEN week_number < 24 THEN 'Bef'
+    WHEN week_number > 24 THEN 'Aft'
+  END AS Intervention
+from CTE1)
+SELECT 
+    Intervention,
+    SUM(transactions) AS transaction_,
+    SUM(sales) as sales_,
+    sum(sales)/ SUM(SUM(sales)) OVER () *100 As Percentage
+from CTE2
+group by Intervention
+;
+```
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/4b6bb887-4461-4694-a8f0-8fc49b200c8b)
+
+- CTE1
+  - Select dates within a 28-day (4 weeks) window centered around (before and after) 2020/06/15.
+
+- CTE2
+  - Introduce a new column with the following labels:
+    - 'BEF' for dates falling within 4 weeks before 2020/06/15.
+    - 'AFT' for dates falling within 4 weeks after 2020/06/15.
+
+- Finally, I computed:
+  - The total number of transactions during the 4 weeks before and after 2020/06/15, respectively.
+  - The total sales amount for the 4 weeks before and after 2020/06/15, respectively.
+  - The percentage of sales during the 4 weeks before and after 2020/06/15, respectively.
+    
+#### What is the growth or reduction rate in actual values and percentage of sales?
+
+```sql
+WITH CTE1 as (
+Select *
+from clean_weekly_sales
+where 
+    (dayofyear(DATE_FORMAT(week_dates, '%y/%m/%d')) > dayofyear(DATE_FORMAT('2020/06/15', '%y/%m/%d'))-28
+    and week_dates < DATE_FORMAT('2020/06/15', '%y/%m/%d')
+	and calendar_year = 2020 )
+    or (dayofyear(DATE_FORMAT(week_dates, '%y/%m/%d')) < dayofyear(DATE_FORMAT('2020/06/15', '%y/%m/%d'))+28
+    and week_dates > DATE_FORMAT('2020/06/15', '%y/%m/%d')
+	and calendar_year = 2020 )
+order by week_number),
+CTE2 as (
+select *,
+    CASE
+    WHEN week_number < 24 THEN 'Bef'
+    WHEN week_number > 24 THEN 'Aft'
+  END AS Intervention
+from CTE1)
+SELECT 
+    Intervention,
+    SUM(transactions) AS transaction_,
+    SUM(transactions) - LAG(SUM(transactions)) OVER (ORDER BY Intervention) AS Intervention_difference,
+    SUM(transactions) / LAG(SUM(transactions)) OVER (ORDER BY Intervention) AS Intervention_difference
+from CTE2
+group by Intervention;
+```
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/142e5901-0c96-4b0f-b773-7542c602d876)
+
+Similarly: 
+
+- CTE1
+  - Select dates within a 28-day (4 weeks) window centered around (before and after) 2020/06/15.
+
+- CTE2
+  - Introduce a new column with the following labels:
+    - 'BEF' for dates falling within 4 weeks before 2020/06/15.
+    - 'AFT' for dates falling within 4 weeks after 2020/06/15.
+
+- Finally, I computed:
+  - The total number of transactions during the 4 weeks before and after 2020/06/15, respectively.
+  - The difference of the sales amount for between the 4 weeks before and after 2020/06/15, respectively.
+  - The growth rate of sales during the 4 weeks before and after 2020/06/15, respectively.
+    
+> Summary:
+> Following the introduction of the new sustainable packaging, there has been a increase in sales, resulting in an increase of $102,587. This corresponds to a growth rate of 1.22%.
+
+
+### 11. What about the entire 12 weeks before and after?
+
+In this instance, I reused the code from the preceding question, modifying the filtering criterion from 24 days (4 weeks) to 84 days (12 weeks). The outcome is as follows:
+>![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/3ea3fa2c-6504-42c1-9125-cc3f1d89ce77)
+>
+>![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/370eb20d-4926-4f94-a942-31e8e6ee2301)
+>
+>In this scenario, the count of transactions within the 12-week window before and after 2020/06/15 experienced a decrease of $1,607,880, indicating a reduction of 00.94%.
+
+Then I used R to visualise the sales difference within the 12-week window before and after 2020/06/15 
+
+```r
+library(dplyr)
+sales<-read.csv("sales.csv")
+sales$week_dates <- ymd(sales$week_dates)
+sum_sales <- sales %>%
+  group_by(week_dates) %>%
+  summarize(total_sales = sum(sales))
+plot(sum_sales$week_dates,sum_sales$total_sales,
+     type = "l",
+     xlab = "week_dates",
+     ylab = "sales")
+abline(v = ymd("2020/06/15"),
+       col = "red")
+abline(h = mean(sum_sales$total_sales[sum_sales$week_dates<ymd("2020/06/15")]),
+       col = "blue")
+abline(h = mean(sum_sales$total_sales[sum_sales$week_dates>ymd("2020/06/15")]),
+       col = "green")
+```
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/40c7dd32-72d0-4e9e-8882-548a0b09e8a9)
+
+- In this visual representation, the vertical red line signifies the cutoff date of 2020/06/15.
+- The blue horizontal line corresponds to the average sales within the 12-week window before 2020/06/15.
+- The green horizontal line indicates the average sales within the 12-week window after 2020/06/15.
+- A noticeable descending trend in sales is evident from the graph.
+
+> However, we should also consider the seasonal pattern of sales:
+```r
+library(tsibble)
+library(dplyr)
+library(lubridate)
+library(feasts)
+
+sales <- read.csv("1.csv")
+sales$week_dates <- ymd(sales$week_dates)
+
+sum_sales <- sales %>%
+  mutate(Month = yearmonth(week_dates)) %>%
+  group_by(Month) %>%
+  summarize(total_sales = sum(sales))
+
+# Convert to tsibble and fill gaps
+sum_sales <- as_tsibble(sum_sales, index = Month) 
+
+plot(sum_sales$Month[1:7], sum_sales$total_sales[1:7],
+     type = "l")
+
+ggplot(sum_sales, aes(x = Month, y = total_sales)) +
+  geom_line() +
+  labs(title = "Total Sales Over Time")+
+  geom_vline(xintercept = as.numeric(ymd("2020/06/15")), linetype = "dashed", color = "blue") 
+```
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/b21da147-ad40-4d51-9b45-e8f93b40dba2)
+
+We can observe a distinct seasonal pattern based on the data from 2018 to 2020: 
+- According to the trends in 2018 and 2019, we anticipate a peak in sales around April and July, with a corresponding drop in sales between April and July.
+- However, in 2020, sales continue to rise from April to June, coinciding with the introduction of new sustainable packaging in mid-June. Surprisingly, there is an unexpected decline in sales in July, followed by a recovery in August.
+- Consequently, attributing the fluctuations in sales solely to the introduction of the new sustainable packaging may be challenging, given the deviation from the typical sales patterns observed in previous years.
