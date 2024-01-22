@@ -153,3 +153,14 @@ group by page_id;
 ```
 ![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/6e968854-b25b-43f3-98ad-3e7b1d6751a2)
 > There is no enough information to answer this question, from the given dataset, we can only know all the purchased orders went through confirmation page.
+
+## 2. Product Funnel Analysis
+
+Using a single SQL query — create a new output table which has the following details:
+
+| Question | event_type | event_name |
+|---|---|---|
+| How many times was each product viewed? | 1 | Page View |
+| How many times was each product added to cart? | 2 | Add to Cart |
+| How many times was each product added to a cart but not purchased (abandoned)? | 2 but not 3 |  |
+| How many times was each product purchased? | 3 | Purchase |
