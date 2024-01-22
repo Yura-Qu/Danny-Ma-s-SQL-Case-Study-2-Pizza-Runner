@@ -122,3 +122,34 @@ LIMIT 3;
 ```
 ![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/ca193cf5-1452-4c4e-a998-2ed0ed011dc8)
 
+### 1.8 What is the number of views and cart adds for each product category?
+
+> product category -- `product_category`
+> number of views -- `event_type` = 1
+> cart adds -- `event_type` = 2
+
+```sql
+SELECT 
+    page_hierarchy.product_category,
+    SUM(CASE WHEN events.event_type = 1 THEN 1 ELSE 0 END) AS 'Page View',
+    SUM(CASE WHEN events.event_type = 2 THEN 1 ELSE 0 END) AS 'Add to Cart'
+FROM events
+JOIN page_hierarchy ON events.page_id = page_hierarchy.page_id
+WHERE page_hierarchy.product_category is not null
+GROUP BY page_hierarchy.product_category
+ORDER BY page_hierarchy.product_category;
+```
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/217b2bb1-b997-401f-8b01-a80a266da9b1)
+
+### 1.9 What are the top 3 products by purchases?
+
+```sql
+SELECT 
+    page_id,
+    count(page_id)
+FROM events
+where event_type = 3
+group by page_id;
+```
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/6e968854-b25b-43f3-98ad-3e7b1d6751a2)
+> There is no enough information to answer this question, from the given dataset, we can only know all the purchased orders went through confirmation page.
