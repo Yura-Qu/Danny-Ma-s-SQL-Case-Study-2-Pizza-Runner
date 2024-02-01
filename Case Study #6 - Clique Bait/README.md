@@ -164,3 +164,73 @@ Using a single SQL query — create a new output table which has the following d
 | How many times was each product added to cart? | 2 | Add to Cart |
 | How many times was each product added to a cart but not purchased (abandoned)? | 2 but not 3 |  |
 | How many times was each product purchased? | 3 | Purchase |
+
+## 3. Generate a table that has 1 single row for every unique visit_id record and has the following columns:
+
+| Variable  | Definition | Table from | Variable from  |
+|---|---|---|---|
+| user_id |  | users | user_id |
+| visit_id |  | events | visit_id |
+| visit_start_time | the earliest event_time for each visit | events | event_time |
+| page_views | count of page views for each visit | events | event_type = 1 |
+| cart_adds | count of product cart add events for each visit | events | event_type = 2 |
+| purchase | if a purchase event exists for each visit then 1 else 0 | events | event_type = 3 |
+| campaign_name | if the visit_start_time falls between the start_date and end_date |  | visit_start_time |
+| impression | count of ad impressions for each visit | events | event_type = 4 |
+| click | count of ad clicks for each visit | events | event_type = 5 |
+
+```sql
+CREATE TABLE Campaigns AS
+select 
+    distinct user_id,visit_id,
+    Min(start_date) as visit_start_time,
+    sum(case when event_type = 1 then 1 else 0 end) as page_views,
+    sum(case when event_type = 2 then 1 else 0 end) as cart_adds,
+    sum(case when event_type = 3 then 1 else 0 end) as purchase,
+    case
+        when min(event_time) > '2020-01-01 00:00:00' and min(event_time) < '2020-01-14 00:00:00'
+			then 'BOGOF - Fishing For Compliments'
+		when min(event_time) > '2020-01-15 00:00:00' and min(event_time) < '2020-01-28 00:00:00'
+			then '25% Off - Living The Lux Life'
+		when min(event_time) > '2020-02-01 00:00:00' and min(event_time) < '2020-03-31 00:00:00'
+			then 'Half Off - Treat Your Shellf(ish)' 
+		else NULL
+end as Campaign,
+    sum(case when event_type = 4 then 1 else 0 end) as impression,
+    sum(case when event_type = 5 then 1 else 0 end) as click
+from events
+join users on events.cookie_id = users.cookie_id
+group by user_id,visit_id;
+```
+![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/b0085dc4-afb4-43cb-a748-6fb8e454350b)
+
+
+Question:
+1. Identifying users who have received impressions during each campaign period and comparing each metric with other users who did not have an impression event
+   ```r
+   Campaigns <- read.csv("Campaigns.csv")
+   Campaigns$visit_start_time <- as.Date(Campaigns$visit_start_time)
+   # Identifying users who have received impressions during each campaign period and comparing each metric with other users who did not have an impression event
+   aggregate(cbind(page_views,
+                   cart_adds,
+                   purchase,
+                   click) ~ impression, data = Campaigns, mean)
+   ```
+   ![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/59af1448-55c0-4f5e-a8b5-6daf8848d8ca)
+
+   - As we can observe, for each metric, users who have received impressions during each campaign period showed a significant difference in compare with users who did not receive impressions:
+     - Higher count of page views for each visit
+     - Higher count of product cart add events for each visit
+     - Greater probability that purchase event exists for each visit
+     - Higher count of ad clicks for each visit
+2. Does clicking on an impression lead to higher purchase rates?
+   ```r
+   lm1 <- lm(purchase ~ click, data = Campaigns)
+   summary(lm1)
+   ```
+   ![image](https://github.com/Yura-Qu/SQL-Case-Study/assets/143141778/57276a2c-69c5-44f3-bbdb-341a10e54b85)
+
+   - The model is statistically significant, and the independent variable "click" has a significant positive effect on the dependent variable "purchase" -- clicking on an impression is correlated with a higher purchase rates? The model explains about 14.95% of the variance in the dependent variable.
+
+3. What is the uplift in purchase rate when comparing users who click on a campaign impression versus users who do not receive an impression? What if we compare them with users who just an impression but do not click?
+- What metrics can you use to quantify the success or failure of each campaign compared to eachother?
